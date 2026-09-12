@@ -820,14 +820,6 @@ footer.site p{font-size:11.5px;color:#c9b3a3;line-height:1.6;margin:0 0 8px}
     'lh_CLhcQ2Rh546lS38dr8tAb_85ScJhsxYDynbzbCePDfE';
 
 
-  /* Pending-checkout tracker. checkout.html only RECORDS the started checkout
-     here (no email is sent at this point). The backend decides whether to send
-     the "Checkout Pending" email 15 minutes later, and the Shopify orders/paid
-     webhook cancels it if the customer pays. Deploy checkout-pending.php. */
-  var PENDING_URL =
-    'https://deskbackend.getnos.io/checkout-pending.php';
-
-
   /* =========================================================
      RAZORPAY PAYMENT LINKS
      
@@ -1076,10 +1068,10 @@ var VARIANTS = {
       state:    CUSTOMER ? CUSTOMER.state    : '',
       pin:      CUSTOMER ? CUSTOMER.pin      : '',
 
-      /* Lifecycle. This fires the moment the customer STARTS checkout. If no
-         matching "purchase completed" notification arrives from Shopify, the
-         lead stayed abandoned. */
-      status: 'checkout_started',
+      /* Sent to Desk the moment the customer submits their checkout details.
+         Desk raises this in the inbox with the subject below. */
+      subject: 'New Lead Eliqo Natural - Checkout Pending',
+      status: 'checkout_pending',
       order_ref: ORDER_REF,
 
       page:
@@ -1116,7 +1108,7 @@ var VARIANTS = {
        Payment should NOT be blocked if Desk fails.
     ======================================================= */
 
-    fetch(PENDING_URL, {
+    fetch(DESK_URL, {
 
       method: 'POST',
 
