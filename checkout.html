@@ -496,6 +496,11 @@ footer.site p{font-size:11.5px;color:#c9b3a3;line-height:1.6;margin:0 0 8px}
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
         Secured checkout &#183; your details are never shared
       </div>
+      <div class="co-note" style="margin-top:7px">
+        Have an Eliqo account?
+        <a href="https://eliqonaturals.com/account/login?return_url=%2Fcart" target="_blank" rel="noopener" style="color:var(--green);font-weight:600;margin:0 4px">Sign in</a>
+        &#183; or just continue as guest
+      </div>
     </div>
   </div>
 </div>
@@ -815,6 +820,14 @@ footer.site p{font-size:11.5px;color:#c9b3a3;line-height:1.6;margin:0 0 8px}
     'lh_CLhcQ2Rh546lS38dr8tAb_85ScJhsxYDynbzbCePDfE';
 
 
+  /* Pending-checkout tracker. checkout.html only RECORDS the started checkout
+     here (no email is sent at this point). The backend decides whether to send
+     the "Checkout Pending" email 15 minutes later, and the Shopify orders/paid
+     webhook cancels it if the customer pays. Deploy checkout-pending.php. */
+  var PENDING_URL =
+    'https://deskbackend.getnos.io/checkout-pending.php';
+
+
   /* =========================================================
      RAZORPAY PAYMENT LINKS
      
@@ -1103,7 +1116,7 @@ var VARIANTS = {
        Payment should NOT be blocked if Desk fails.
     ======================================================= */
 
-    fetch(DESK_URL, {
+    fetch(PENDING_URL, {
 
       method: 'POST',
 

@@ -15,6 +15,8 @@
    Shopify webhook at its public URL (see SETUP notes at the bottom).
 ============================================================================= */
 
+require_once __DIR__ . '/desk-lib.php';   /* db(), send_inbox_email(), pending_mark_completed(), SUBJECT_SUCCESS */
+
 /* ---------------------------------------------------------------------------
    CONFIG  — prefer environment variables; the constants are fallbacks.
 --------------------------------------------------------------------------- */
@@ -25,9 +27,7 @@
    This ONE secret verifies every admin-created webhook on the store. */
 $SHOPIFY_WEBHOOK_SECRET = getenv('SHOPIFY_WEBHOOK_SECRET') ?: 'fae6b2ed01356b93f09f5128850b6b5a1966735cb717fbe8fbd2ad79873778d4';
 
-/* Getnos Desk intake — same endpoint + key the landing page uses. */
-$DESK_URL = getenv('DESK_URL') ?: 'https://deskbackend.getnos.io/v1/lead';
-$DESK_KEY = getenv('DESK_KEY') ?: 'lh_CLhcQ2Rh546lS38dr8tAb_85ScJhsxYDynbzbCePDfE';
+/* Desk endpoint + key and the DB connection come from desk-lib.php. */
 
 /* Same Shopify VARIANT ids as checkout.html — lets the completed record mirror
    the started record's fields (jar count + add-on Yes/No). Keep in sync. */
@@ -213,45 +213,21 @@ $lead = array(
 
 
 /* =============================================================================
-   6. FORWARD TO DESK  (with one retry; failures are logged, not fatal)
+   6. SUPPRESS PENDING  +  SEND SUCCESS EMAIL IMMEDIATELY
+   -----------------------------------------------------------------------------
+   Marking the tracker row completed is what guarantees the 15-minute pending
+   email never fires for a buyer who paid. Then the success email goes out now
+   (subject "New Lead Eliqo Natural - Order Confirmed"), with one quick retry.
 ============================================================================= */
 
-function post_to_desk($url, $key, $payload) {
-  $ch = curl_init($url);
-  curl_setopt_array($ch, array(
-    CURLOPT_POST           => true,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 10,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_HTTPHEADER     => array(
-      'Content-Type: application/json',
-      'Authorization: Bearer ' . $key
-    ),
-    CURLOPT_POSTFIELDS     => json_encode($payload)
-  ));
-  $resp = curl_exec($ch);
-  $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  $err  = curl_error($ch);
-  curl_close($ch);
-  return array($code, $resp, $err);
-}
+$email = $lead['email'];
+$phone = $lead['phone'];
 
-list($code, $resp, $err) = post_to_desk($DESK_URL, $DESK_KEY, $lead);
+pending_mark_completed($email, $phone);   /* cancels the pending email */
 
-if ($code < 200 || $code >= 300) {
-  /* one quick retry */
+if (!send_inbox_email(SUBJECT_SUCCESS, $lead)) {
   usleep(400000); /* 0.4s */
-  list($code, $resp, $err) = post_to_desk($DESK_URL, $DESK_KEY, $lead);
-}
-
-if ($code < 200 || $code >= 300) {
-  error_log(
-    'Desk forward failed for Shopify order '
-    . ($lead['shopify_order'] ?? '?')
-    . ' | http=' . $code
-    . ' | curl=' . $err
-    . ' | resp=' . substr((string) $resp, 0, 300)
-  );
+  send_inbox_email(SUBJECT_SUCCESS, $lead);
 }
 
 /* =============================================================================
