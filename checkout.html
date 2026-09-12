@@ -813,23 +813,17 @@ footer.site p{font-size:11.5px;color:#c9b3a3;line-height:1.6;margin:0 0 8px}
      Records the order before payment
   ========================================================= */
 
-  var DESK_URL =
-    'https://deskbackend.getnos.io/v1/lead';
-
-  var DESK_KEY =
-    'lh_CLhcQ2Rh546lS38dr8tAb_85ScJhsxYDynbzbCePDfE';
+  /* Backend base for the checkout-start ping. Same origin: your nginx
+   proxies /api/* to the Node service. The Shopify webhook secret AND the
+   Desk key live ONLY on that backend, never here in client JavaScript. */
+  var API_BASE = '';
 
 
   /* =========================================================
-     RAZORPAY PAYMENT LINKS
-     
-     IMPORTANT:
-     Each amount has its own Razorpay Payment Link.
-
-     Configure the SUCCESS REDIRECT inside Razorpay
-     for every Payment Link as:
-
-     https://eliqonaturals.com/
+     SHOPIFY STORE
+     Customers are sent to this store. Products are added to the
+     Shopify cart by variant id (below) and the customer completes
+     payment on Shopify's own checkout.
   ========================================================= */
 
   var SHOP_DOMAIN = 'https://eliqonaturals.com';
@@ -930,10 +924,9 @@ var VARIANTS = {
 
 
   /* =========================================================
-     PAYMENT SUCCESS URL
-     
-     This is the page you want Razorpay to redirect to
-     after successful payment.
+     POST-PURCHASE
+     Shopify shows its own order-confirmation page after payment,
+     so no success URL is needed here. Kept for reference only.
   ========================================================= */
 
   var SUCCESS_URL =
@@ -1025,134 +1018,59 @@ var VARIANTS = {
     var cartUrl = buildCartUrl();
 
 
-    /* =======================================================
-       ORDER DATA FOR GETNOS DESK
-    ======================================================= */
-
-    var order = {
-
-      form: 'order',
-
-      pack:
-        pack +
-        ' jar' +
-        (pack > 1 ? 's' : ''),
-
-      jars: String(pack),
-
-      khapali:
-        addons.khapali
-          ? 'Yes'
-          : 'No',
-
-      groundnut:
-        addons.groundnut
-          ? 'Yes'
-          : 'No',
-
-      jaggery:
-        addons.jaggery
-          ? 'Yes'
-          : 'No',
-
-      total:
-        '₹' + total,
-
-      /* Shipping details captured on this page before payment */
-      name:     CUSTOMER ? CUSTOMER.name     : '',
-      phone:    CUSTOMER ? CUSTOMER.phone    : '',
-      email:    CUSTOMER ? CUSTOMER.email    : '',
-      address1: CUSTOMER ? CUSTOMER.address1 : '',
-      address2: CUSTOMER ? CUSTOMER.address2 : '',
-      city:     CUSTOMER ? CUSTOMER.city     : '',
-      state:    CUSTOMER ? CUSTOMER.state    : '',
-      pin:      CUSTOMER ? CUSTOMER.pin      : '',
-
-      /* Sent to Desk the moment the customer submits their checkout details.
-         Desk raises this in the inbox with the subject below. */
-      subject: 'New Lead Eliqo Natural - Checkout Pending',
-      status: 'checkout_pending',
-      order_ref: ORDER_REF,
-
-      page:
-        window.location.href,
-
-      source:
-        'eliqo-checkout'
-
-    };
-
-
-    /* =======================================================
-       CHECK WHETHER PAYMENT LINK EXISTS
-    ======================================================= */
-
+    /* Guard: Shopify variant IDs must be set before going live. */
     if (VARIANTS.ghee.indexOf('REPLACE_') === 0) {
-
       submitting = false;
-
       setBusy(false);
-
-      alert(
-        'Set your Shopify variant IDs in the VARIANTS config at the top of this script before going live.'
-      );
-
+      alert('Set your Shopify variant IDs in the VARIANTS config at the top of this script before going live.');
       return;
-
     }
 
+    /* =======================================================
+       TELL OUR BACKEND THE CHECKOUT STARTED
+       -----------------------------------------------------
+       This starts the 12-minute "Checkout Pending" timer on the
+       server. If the customer completes the Shopify purchase, the
+       Shopify order webhook cancels that timer and sends the
+       "Purchase Successful" notification instead. The redirect below
+       is never blocked if this ping fails.
+    ======================================================= */
+    try {
+      var startPayload = JSON.stringify({
+        orderRef: ORDER_REF,
+        name:     CUSTOMER ? CUSTOMER.name     : '',
+        email:    CUSTOMER ? CUSTOMER.email    : '',
+        phone:    CUSTOMER ? CUSTOMER.phone    : '',
+        address1: CUSTOMER ? CUSTOMER.address1 : '',
+        address2: CUSTOMER ? CUSTOMER.address2 : '',
+        city:     CUSTOMER ? CUSTOMER.city     : '',
+        state:    CUSTOMER ? CUSTOMER.state    : '',
+        pin:      CUSTOMER ? CUSTOMER.pin      : '',
+        pack:     pack + ' jar' + (pack > 1 ? 's' : ''),
+        total:    '\u20b9' + total,
+        page:     window.location.href
+      });
+
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(API_BASE + '/api/checkout/start',
+          new Blob([startPayload], { type: 'application/json' }));
+      } else {
+        fetch(API_BASE + '/api/checkout/start', {
+          method: 'POST',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: startPayload
+        }).catch(function () {});
+      }
+    } catch (e) {
+      /* never block checkout on a tracking failure */
+    }
 
     /* =======================================================
-       SEND ORDER TO GETNOS DESK
-       
-       Payment should NOT be blocked if Desk fails.
+       REDIRECT TO THE SHOPIFY CHECKOUT (cart permalink)
+       e.g. https://eliqonaturals.com/cart/<variant>:<qty>,<variant>:1
     ======================================================= */
-
-    fetch(DESK_URL, {
-
-      method: 'POST',
-
-      keepalive: true,
-
-      headers: {
-
-        'Content-Type':
-          'application/json',
-
-        'Authorization':
-          'Bearer ' + DESK_KEY
-
-      },
-
-      body:
-        JSON.stringify(order)
-
-    })
-
-    .catch(function (error) {
-
-      /*
-       Do not block payment if Desk has an error.
-       Customer can still continue to Razorpay.
-      */
-
-      console.warn(
-        'Desk submission failed:',
-        error
-      );
-
-    })
-
-    .then(function () {
-
-      /* =====================================================
-         REDIRECT CUSTOMER TO RAZORPAY PAYMENT PAGE
-      ===================================================== */
-
-      window.location.href = cartUrl;
-
-    });
-
+    window.location.href = cartUrl;
   }
 
 
