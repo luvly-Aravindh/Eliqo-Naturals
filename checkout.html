@@ -243,10 +243,10 @@ footer.site p{font-size:11.5px;color:#c9b3a3;line-height:1.6;margin:0 0 8px}
       <div class="ai"><div class="an">Groundnut Oil, Cold Pressed <span class="asz">1L</span></div><div class="ad">Pure cold-pressed peanut oil, chemical-free, with its natural aroma kept intact.</div></div>
       <div class="ap">+&#8377;479</div>
     </label>
-    <label class="addon" data-addon="jaggery" data-price="169">
-      <input type="checkbox"><span class="ck"></span><img src="https://eliqonaturals.com/cdn/shop/files/Pure_Jaggery_Powder.png?v=1773895119&width=120" alt="">
-      <div class="ai"><div class="an">Pure Jaggery Powder <span class="asz">500g</span></div><div class="ad">Chemical-free desi gur, unrefined and naturally mineral-rich, the classic pairing with ghee.</div></div>
-      <div class="ap">+&#8377;169</div>
+    <label class="addon" data-addon="jaggery" data-price="199">
+      <input type="checkbox"><span class="ck"></span><img src="https://eliqonaturals.com/cdn/shop/files/jaggery-lump-desi-gur-front-pack.jpg?v=1773895751&width=120" alt="Organic Jaggery Lump">
+      <div class="ai"><div class="an">Organic Jaggery Lump <span class="asz">900g</span></div><div class="ad">Pure, Unrefined & Chemical-Free Sweetener</div></div>
+      <div class="ap">+&#8377;199</div>
     </label>
 
     <div class="deliv">
@@ -396,7 +396,7 @@ footer.site p{font-size:11.5px;color:#c9b3a3;line-height:1.6;margin:0 0 8px}
   var ADD = {
     khapali: 469,
     groundnut: 479,
-    jaggery: 169
+    jaggery: 199
   };
 
   var pack = 2;
@@ -670,13 +670,13 @@ footer.site p{font-size:11.5px;color:#c9b3a3;line-height:1.6;margin:0 0 8px}
        ghee      -> a2-ghee (500 g)
        khapali   -> khapali-atta (2 kg)
        groundnut -> groundnut-oil (1 L)
-       jaggery   -> jaggery-powder (500 g)
+       jaggery   -> jaggery-lump (900 g)
   ------------------------------------------------------- */
 var VARIANTS = {
   ghee:      '44507148845167',  // A2 Cow Ghee (Bilona) 500 g
   khapali:   '44507149205615',  // Khapali (Emmer) Wheat Flour 2 kg
   groundnut: '44507134361711',  // Groundnut Oil 1 L
-  jaggery:   '44178189221999'   // Pure Jaggery Powder 500 g
+  jaggery:   '44178193547375'   // Organic Jaggery Lump 900 g — from /products/jaggery-lump.js
 };
 
   /* Optional Shopify discount code auto-applied at checkout.
@@ -831,8 +831,8 @@ var VARIANTS = {
     var cartUrl = buildCartUrl();
 
 
-    /* Guard: Shopify variant IDs must be set before going live. */
-    if (VARIANTS.ghee.indexOf('REPLACE_') === 0) {
+    /* Guard: every selected item's Shopify variant ID must be set before going live. */
+    if (cartUrl.indexOf('REPLACE_') !== -1) {
       submitting = false;
       setBusy(false);
       alert('Set your Shopify variant IDs in the VARIANTS config at the top of this script before going live.');
